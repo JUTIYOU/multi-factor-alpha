@@ -1,0 +1,62 @@
+# 因子注册表
+# 字段说明:
+#   category: price_volume / fundamental / valuation
+#   formula: 人类可读公式说明
+#   lookback: 所需历史交易日数(不含标签)
+#   direction: 先验方向 +1(值大未来收益高) / -1
+#   missing: NaN(保留缺失) / median(截面中位数填充) / drop
+#   neutralize: 是否进入三版中性化对比
+#   sources: 依赖字段(用于"最晚信息日"追溯断言)
+#   latest_info: 最晚信息时点声明
+
+price_volume:
+  rev_5:    {formula: "-ret(5d)", lookback: 6, direction: -1, missing: NaN, neutralize: true, sources: [pctChg], latest_info: "t日收盘"}
+  rev_10:   {formula: "-ret(10d)", lookback: 11, direction: -1, missing: NaN, neutralize: true, sources: [pctChg], latest_info: "t日收盘"}
+  rev_20:   {formula: "-ret(20d)", lookback: 21, direction: -1, missing: NaN, neutralize: true, sources: [pctChg], latest_info: "t日收盘"}
+  mom_12_1: {formula: "ret(t-252..t-21)剔除最近1月", lookback: 253, direction: 1, missing: NaN, neutralize: true, sources: [pctChg], latest_info: "t日收盘"}
+  res_mom:  {formula: "12-1动量对市值+行业残差", lookback: 253, direction: 1, missing: NaN, neutralize: false, sources: [pctChg, mktcap, industry], latest_info: "t日收盘"}
+  vol_20:   {formula: "std(ret,20d)", lookback: 21, direction: -1, missing: NaN, neutralize: true, sources: [pctChg], latest_info: "t日收盘"}
+  vol_60:   {formula: "std(ret,60d)", lookback: 61, direction: -1, missing: NaN, neutralize: true, sources: [pctChg], latest_info: "t日收盘"}
+  ivol:     {formula: "ret对市场收益残差的std(60d)", lookback: 61, direction: -1, missing: NaN, neutralize: true, sources: [pctChg, index_pctChg], latest_info: "t日收盘"}
+  skew_20:  {formula: "skew(ret,20d)", lookback: 21, direction: -1, missing: NaN, neutralize: true, sources: [pctChg], latest_info: "t日收盘"}
+  down_vol: {formula: "std(ret|ret<0,20d)", lookback: 21, direction: -1, missing: NaN, neutralize: true, sources: [pctChg], latest_info: "t日收盘"}
+  max_dd:   {formula: "60d内最大回撤(后复权)", lookback: 61, direction: -1, missing: NaN, neutralize: true, sources: [close_badj], latest_info: "t日收盘"}
+  turn_mean: {formula: "mean(turn,20d)", lookback: 21, direction: -1, missing: NaN, neutralize: true, sources: [turn], latest_info: "t日收盘"}
+  turn_chg: {formula: "turn_mean(5d)/turn_mean(60d)-1", lookback: 61, direction: -1, missing: NaN, neutralize: true, sources: [turn], latest_info: "t日收盘"}
+  amount_mean: {formula: "mean(amount,20d)", lookback: 21, direction: -1, missing: NaN, neutralize: true, sources: [amount], latest_info: "t日收盘"}
+  amplitude: {formula: "mean((high-low)/preclose,20d)", lookback: 21, direction: -1, missing: NaN, neutralize: true, sources: [high, low, preclose], latest_info: "t日收盘"}
+  vol_ratio: {formula: "volume(5d均)/volume(60d均)", lookback: 61, direction: -1, missing: NaN, neutralize: true, sources: [volume], latest_info: "t日收盘"}
+  pv_corr:  {formula: "corr(close,volume,20d)", lookback: 21, direction: -1, missing: NaN, neutralize: true, sources: [close, volume], latest_info: "t日收盘"}
+  vol_asym: {formula: "mean(vol|ret>0)/mean(vol|ret<0)-1(60d)", lookback: 61, direction: -1, missing: NaN, neutralize: true, sources: [volume, pctChg], latest_info: "t日收盘"}
+  overnight: {formula: "mean(open/preclose-1,20d)", lookback: 21, direction: 1, missing: NaN, neutralize: true, sources: [open, preclose], latest_info: "t日收盘"}
+  intraday: {formula: "mean(close/open-1,20d)", lookback: 21, direction: -1, missing: NaN, neutralize: true, sources: [open, close], latest_info: "t日收盘"}
+
+valuation:
+  # 估值四因子直接用行情接口peTTM/pbMRQ/psTTM/pcfNcfTTM取倒数
+  # T1.6用自建pubDate门控BP对拍20例,系统性偏离则弃用接口版
+  BP:  {formula: "1/pbMRQ", lookback: 1, direction: 1, missing: NaN, neutralize: true, sources: [pbMRQ], latest_info: "t日收盘"}
+  EP:  {formula: "1/peTTM", lookback: 1, direction: 1, missing: NaN, neutralize: true, sources: [peTTM], latest_info: "t日收盘"}
+  SP:  {formula: "1/psTTM", lookback: 1, direction: 1, missing: NaN, neutralize: true, sources: [psTTM], latest_info: "t日收盘"}
+  CFP: {formula: "1/pcfNcfTTM", lookback: 1, direction: 1, missing: NaN, neutralize: true, sources: [pcfNcfTTM], latest_info: "t日收盘"}
+
+fundamental:
+  # 字段名已按冒烟实测修正(2026-11-15):
+  # growth接口无YOYSales → 营收同比用profit.MBRevenue自建YoY(去年同期值也须pubDate≤t)
+  # cash_flow接口全为比率无原始CFO → 应计改用现金流含量CFOToNP
+  # ROA无直接字段 → 不纳入主线(可选: operation接口周转率或dupont分解)
+  roe:      {formula: "roeAvg(最新披露季)", lookback: 1, direction: 1, missing: NaN, neutralize: true, sources: [fin_roeAvg], latest_info: "最近pubDate"}
+  gpm:      {formula: "gpMargin(最新披露季)", lookback: 1, direction: 1, missing: NaN, neutralize: true, sources: [fin_gpMargin], latest_info: "最近pubDate"}
+  npm:      {formula: "npMargin(最新披露季)", lookback: 1, direction: 1, missing: NaN, neutralize: true, sources: [fin_npMargin], latest_info: "最近pubDate"}
+  lev:      {formula: "-liabilityToAsset", lookback: 1, direction: -1, missing: NaN, neutralize: true, sources: [fin_liabilityToAsset], latest_info: "最近pubDate"}
+  g_rev:    {formula: "MBRevenue同比(自建:最新披露vs去年同期披露)", lookback: 1, direction: 1, missing: NaN, neutralize: true, sources: [fin_MBRevenue], latest_info: "最近pubDate"}
+  g_np:     {formula: "YOYPNI(归属净利同比,接口已算)", lookback: 1, direction: 1, missing: NaN, neutralize: true, sources: [fin_YOYPNI], latest_info: "最近pubDate"}
+  cfo_np:   {formula: "CFOToNP(经营现金流/净利润)", lookback: 1, direction: 1, missing: NaN, neutralize: true, sources: [fin_CFOToNP], latest_info: "最近pubDate"}
+  eps_ttm:  {formula: "epsTTM(滚动每股收益)", lookback: 1, direction: 1, missing: NaN, neutralize: true, sources: [fin_epsTTM], latest_info: "最近pubDate"}
+
+# 控制变量(不作因子,作中性化暴露/归因)
+controls:
+  ln_mktcap: {formula: "ln(close*as-of totalShare)", sources: [close, fin_totalShare]}
+  industry:  {formula: "BaoStock行业分类(当前口径,历史变更不可得→披露)", sources: [industry]}
+
+# 资金流/情绪: 公开数据不可靠→不纳入主线(规格书3.3)
+sentiment_excluded: "融资融券/大单净流入数据公开源不可靠,不纳入主线"

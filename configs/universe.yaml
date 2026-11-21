@@ -1,0 +1,31 @@
+# 股票池与样本区间配置
+universe:
+  primary: zz500            # 主池: 中证500(月末历史成分快照)
+  robustness: hs300         # 稳健性池: 沪深300(WP9用)
+  index_code: sh.000905     # 基准指数
+  snapshot_freq: M          # 成分快照频率: 月末交易日
+
+sample:
+  pull_start: "2017-01-01"  # 数据拉取起点(财务YoY/动量lookback需要前置期)
+  factor_start: "2018-01-01" # 因子样本正式起点
+  end: "2025-12-31"
+
+filters:
+  min_list_days: 60         # 上市未满N日剔除
+  exclude_st: true          # isST==1剔除
+  exclude_suspended: true   # tradestatus==0剔除
+
+# 一字涨跌停判定(回测成交可行性用, WP6)
+limit_thresholds:
+  main_board: 0.099         # 主板 ±10%
+  growth_board: 0.199       # 创业板300/科创板688 ±20%
+  st_stock: 0.049           # ST ±5%
+
+# BaoStock 字段口径(已核官方文档)
+field_conventions:
+  volume_unit: "股"
+  amount_unit: "元"
+  turn_unit: "%"
+  pctChg_unit: "%"          # 使用时 /100
+  pubDate: "财报公告日(财务接口)"
+  statDate: "报告期截止日"

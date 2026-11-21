@@ -1,0 +1,46 @@
+# 合成模型与训练协议配置
+labels:
+  horizons: [5, 10]          # 双周期都跑
+  type: cross_sectional_rank  # 逐日截面rank作为标签
+  base_return: pctChg        # 收益口径: pctChg/100
+
+cv:
+  scheme: walk_forward        # walk-forward外推
+  train_months: 36
+  test_months: 6
+  step_months: 6
+  embargo_days: 10           # >= max(horizons), 测试集前隔离带
+  purge_days: 10             # 训练集尾部剔除窗口(标签重叠)
+  inner_folds: 5             # train内purged kfold(调参用)
+
+protocols:
+  # 三协议对比: 量化防泄漏代价, 全部结果真实保留
+  - {name: A_no_embargo, embargo: 0, purge: 0, pit_strict: false}
+  - {name: B_embargo, embargo: 10, purge: 10, pit_strict: false}
+  - {name: C_embargo_pit, embargo: 10, purge: 10, pit_strict: true}
+
+model:
+  lgbm:
+    objective: regression
+    boosting_type: gbdt
+    num_leaves: 31
+    learning_rate: 0.05
+    feature_fraction: 0.8
+    bagging_fraction: 0.8
+    bagging_freq: 1
+    min_data_in_leaf: 200
+    lambda_l2: 1.0
+    n_estimators: 800
+    early_stopping_rounds: 50
+    verbose: -1
+    seed: 42
+
+thresholds:
+  oos_ic_abs: 0.05           # 样本外|RankIC|下限
+  oos_icir: 0.3
+  neutral_decay_max: 0.40    # 中性化后衰减上限
+  single_factor_ic: 0.03     # 单因子初筛|IC|
+  single_factor_icir: 0.3
+  shap_corr_proxy: 0.7       # 代理信号判定相关阈值
+  psi_stable: 0.1
+  psi_warn: 0.25

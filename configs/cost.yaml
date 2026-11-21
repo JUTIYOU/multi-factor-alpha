@@ -1,0 +1,17 @@
+# 回测成本假设(A股现实口径,参数可调)
+cost:
+  commission_bp: 3      # 单边佣金 万3
+  stamp_bp: 10          # 卖出印花税 千1(保守口径; 2023-08后实际为万5,敏感分析可改5)
+  slippage_bp: 2        # 单边滑点 万2
+  # 等效: 买≈5bp, 卖≈15bp, 往返≈20bp — 高于规格书"双边不低于万3"下限
+
+execution:
+  signal_time: t_close       # t日收盘生成信号
+  fill_time: next_open       # t+1开盘成交(开盘价,不复权口径+当日pctChg修正)
+  limit_rule: skip_if_limit  # 一字涨跌停放弃当笔交易
+  rebalance_freq: 5          # 与标签周期一致(5/10各跑一次)
+
+portfolio:
+  n_groups: 5                # 五分组
+  long_pct: 0.2              # 多头=信号前20%
+  weighting: equal           # 组内等权
