@@ -1,0 +1,12 @@
+[日历] 2018-01 记录数=31, 列=['calendar_date', 'is_trading_day']
+[成分] 当前=500只, 2018-01-31=500只, 两期完全相同=False, 列=['updateDate', 'code', 'code_name']
+       df_old updateDate取值=['2018-01-29']...
+[日线] sh.600000 行数=7, 列=['date', 'code', 'open', 'high', 'low', 'close', 'preclose', 'volume', 'amount', 'turn', 'tradestatus', 'pctChg', 'peTTM', 'pbMRQ', 'psTTM', 'pcfNcfTTM', 'isST']
+[复权因子] 行数=3, 列=['code', 'dividOperateDate', 'foreAdjustFactor', 'backAdjustFactor', 'adjustFactor']
+[指数] sh.000905 行数=7
+[财务profit] 行数=1, 列=['code', 'pubDate', 'statDate', 'roeAvg', 'npMargin', 'gpMargin', 'netProfit', 'epsTTM', 'MBRevenue', 'totalShare', 'liqaShare']
+[财务growth] 行数=1, 列=['code', 'pubDate', 'statDate', 'YOYEquity', 'YOYAsset', 'YOYNI', 'YOYEPSBasic', 'YOYPNI']
+[财务balance] 行数=1, 列=['code', 'pubDate', 'statDate', 'currentRatio', 'quickRatio', 'cashRatio', 'YOYLiability', 'liabilityToAsset', 'assetToEquity']
+[财务cash_flow] 行数=1, 列=['code', 'pubDate', 'statDate', 'CAToAsset', 'NCAToAsset', 'tangibleAssetToAsset', 'ebitToInterest', 'CFOToOR', 'CFOToNP', 'CFOToGr']
+[basic] 列=['code', 'code_name', 'ipoDate', 'outDate', 'type', 'status']
+[行业] 列=['updateDate', 'code', 'code_name', 'industry', 'industryClassification']
