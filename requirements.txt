@@ -1,4 +1,4 @@
-baostock>=0.8.8
+baostock>=0.8.8; sys_platform == "win32"
 pandas>=2.0
 numpy>=1.26,<3
 scipy>=1.11
