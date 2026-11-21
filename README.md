@@ -1,6 +1,7 @@
 # 多因子合成与风险归因
 
 [![CI](https://github.com/JUTIYOU/multi-factor-alpha/actions/workflows/test.yml/badge.svg)](https://github.com/JUTIYOU/multi-factor-alpha/actions/workflows/test.yml)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://multi-factor-alpha.streamlit.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 
