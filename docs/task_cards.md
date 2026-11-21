@@ -42,8 +42,8 @@
 - `reports/data_quality.md` + `pytest tests/test_pit.py`
 
 
-## Íê³É×´Ì¬ 2026-11-16
-- T0-T1.6 Êı¾İÁ´Â·È«¹ı: GATE_T16.ok
-- WP1-WP5 È«²¿ÑéÊÕ: reports/wp{1..5}_acceptance.md
-- WP6 ÊÕ¹Ù: final_report.md + resume_bullets.md + README¸´ÏÖÂ·¾¶
-- Î´×ö(¿ÉÑ¡Ïî): ÎÄ±¾Ìõ¼ş»¯ÇáÁ¿²âÊÔ(Êı¾İ¿É¿¿ĞÔ²»×ã,Ö÷ÏßÒÑÅÅ³ı)
+## å®ŒæˆçŠ¶æ€ 2026-11-16
+- T0-T1.6 æ•°æ®é“¾è·¯å…¨è¿‡: GATE_T16.ok
+- WP1-WP5 å…¨éƒ¨éªŒæ”¶: reports/wp{1..5}_acceptance.md
+- WP6 æ”¶å®˜: final_report.md + resume_bullets.md + READMEå¤ç°è·¯å¾„
+- æœªåš(å¯é€‰é¡¹): æ–‡æœ¬æ¡ä»¶åŒ–è½»é‡æµ‹è¯•(æ•°æ®å¯é æ€§ä¸è¶³,ä¸»çº¿å·²æ’é™¤)

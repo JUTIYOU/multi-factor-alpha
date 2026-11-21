@@ -63,6 +63,6 @@
 5. growthæ¥å£æœªä½¿ç”¨ï¼ˆè‡ªå»ºåŒæ¯”ï¼Œå»å¹´åŒæœŸåŒæ ·é—¨æ§ï¼‰ã€‚
 
 
-## ÒÑÖªÀàĞÍÎÊÌâ
-- `index_quotes.parquet`: BaoStockÔ­Ê¼×Ö·û´®Î´×ªĞÍ, Ïû·Ñ¶ËĞë`pd.to_datetime(date)`+`astype(float)`(WP5ÒÑ°´´Ë´¦Àí)
-- `industry_map.parquet`: PITĞĞÒµÓ³Éä(code,date->industry), merge_asofÀúÊ·¿ìÕÕ+µ±Ç°¶µµ×, UNKNOWNÕ¼±È5.7%
+## å·²çŸ¥ç±»å‹é—®é¢˜
+- `index_quotes.parquet`: BaoStockåŸå§‹å­—ç¬¦ä¸²æœªè½¬å‹, æ¶ˆè´¹ç«¯é¡»`pd.to_datetime(date)`+`astype(float)`(WP5å·²æŒ‰æ­¤å¤„ç†)
+- `industry_map.parquet`: PITè¡Œä¸šæ˜ å°„(code,date->industry), merge_asofå†å²å¿«ç…§+å½“å‰å…œåº•, UNKNOWNå æ¯”5.7%
