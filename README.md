@@ -1,5 +1,9 @@
 # 多因子合成与风险归因
 
+[![CI](https://github.com/JUTIYOU/multi-factor-alpha/actions/workflows/test.yml/badge.svg)](https://github.com/JUTIYOU/multi-factor-alpha/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
+
 A股日频公开数据上的"可解释多因子合成 + 风险暴露剥离 + 稳定性审计"研究链路。
 
 ## 核心结论(全部真实数字, 详见 reports/final_report.md)
