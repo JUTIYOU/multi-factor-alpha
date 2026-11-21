@@ -1,6 +1,7 @@
 # 多因子合成与风险归因
 
-> **👉 在线交互演示（无需跑代码，点开即玩）：https://multi-factor-alpha.streamlit.app**
+> **在线演示 | Live Demo**: https://multi-factor-alpha.streamlit.app
+> —— 交互式研究结果展示，浏览器直接访问，无需本地运行。
 
 [![CI](https://github.com/JUTIYOU/multi-factor-alpha/actions/workflows/test.yml/badge.svg)](https://github.com/JUTIYOU/multi-factor-alpha/actions/workflows/test.yml)
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://multi-factor-alpha.streamlit.app/)
