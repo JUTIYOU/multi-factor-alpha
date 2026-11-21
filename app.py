@@ -92,11 +92,39 @@ def load(name: str) -> pd.DataFrame:
 S = load("backtest_summary")
 row_main = S[(S.protocol == "P4") & (S.horizon == 10)].iloc[0]
 
+# ---- 杂志报告风(B版): CSS注入 ----
+st.markdown("""<style>
+.stApp {background:#f8fafc;}
+section[data-testid="stSidebar"] {background:#eef2f7;}
+div[data-testid="stVerticalBlockBorderWrapper"] {
+  background:#ffffff; border:1px solid #e2e8f0; border-radius:14px;
+  box-shadow:0 1px 3px rgba(15,23,42,.07);}
+[data-testid="stMetricValue"] {color:#1f4e79; font-size:30px;}
+h1,h2,h3,h4 {color:#1f4e79 !important;}
+.secbar {border-left:5px solid #2e86de; padding-left:10px;
+  font-weight:700; color:#1f4e79; font-size:16px; margin:14px 0 8px;}
+</style>""", unsafe_allow_html=True)
+
+# 层级签名色: 与链卡/页头/结论一致
+LAYER_C = {"因子层": "#2e86de", "信号层": "#0d9488",
+           "时间层": "#d97706", "组合层": "#15803d"}
+
+
+def sec(title: str, color: str = "#2e86de") -> None:
+    """accent-bar 节标题, 统一视觉锚点."""
+    st.markdown(f"<div class='secbar' style='border-left-color:{color}'>"
+                f"{title}</div>", unsafe_allow_html=True)
+
+
 st.markdown(
-    f"<h2 style='color:{C['navy']};margin-bottom:0'>"
-    f"多因子合成与风险归因 · 研究结果交互展示</h2>"
-    f"<p style='color:{C['gray']}'>中证500股票池 · 日频 · 2018-2025 · "
-    f"PIT防泄漏 · 行业+市值中性化 · 含成本回测 · 四层归因链论证</p>",
+    "<div style='background:linear-gradient(135deg,#1f4e79,#2e86de 60%,#0d9488);"
+    "padding:22px 28px;border-radius:16px;margin-bottom:14px;"
+    "box-shadow:0 4px 14px rgba(31,78,121,.25)'>"
+    "<div style='font-size:26px;font-weight:800;color:#ffffff'>"
+    "多因子合成与风险归因</div>"
+    "<div style='color:#dbeafe;font-size:13px;margin-top:5px'>"
+    "中证500股票池 · 日频 · 2018-2025 · PIT防泄漏 · 行业+市值中性化 · "
+    "含成本回测 · 四层归因链论证</div></div>",
     unsafe_allow_html=True)
 
 m = st.columns(6)
@@ -161,22 +189,44 @@ page = st.segmented_control("导航", PAGES, key="page",
 if page == PAGES[0]:
     st.info("**本项目的核心方法：把归因思维贯穿整条研究链** —— 每一层都在问"
             "「结果里多少是真的、多少是借来的」。点击下方卡片直达对应层。")
-    st.markdown("**归因链 · 四层分解（卡片可点击）**")
+    sec("归因链 · 四层分解（节点可点击）")
     chain = [
-        ("🔬 因子层", "IC里有几成真？", "19–26%是风格伪装", PAGES[2]),
-        ("📡 信号层", "预测力来自哪簇？", "流动性簇垄断", PAGES[4]),
-        ("⏱️ 时间层", "失效的是什么？", "lev 真衰减 −0.52", PAGES[5]),
-        ("💰 组合层", "钱是谁赚的？", "残差alpha仅 4–16%", PAGES[6]),
+        ("🔬 因子层", "IC里有几成真？", "19–26%是风格伪装", PAGES[2],
+         "因子层"),
+        ("📡 信号层", "预测力来自哪簇？", "流动性簇垄断", PAGES[4],
+         "信号层"),
+        ("⏱️ 时间层", "失效的是什么？", "lev 真衰减 −0.52", PAGES[5],
+         "时间层"),
+        ("💰 组合层", "钱是谁赚的？", "残差alpha仅 4–16%", PAGES[6],
+         "组合层"),
     ]
+    flow = go.Figure()
+    for i, (a, q, cc, _t, lname) in enumerate(chain):
+        lc = LAYER_C[lname]
+        flow.add_shape(type="rect", x0=i - 0.36, x1=i + 0.36,
+                       y0=-0.42, y1=0.42, fillcolor=lc, opacity=0.10,
+                       line=dict(color=lc, width=1.6))
+        flow.add_annotation(x=i, y=0.16, text=f"<b>{a}</b>",
+                            showarrow=False,
+                            font=dict(size=14, color=lc))
+        flow.add_annotation(x=i, y=-0.08, text=q, showarrow=False,
+                            font=dict(size=11, color="#475569"))
+        flow.add_annotation(x=i, y=-0.28, text=f"<b>{cc}</b>",
+                            showarrow=False,
+                            font=dict(size=11, color=lc))
+        if i < 3:
+            flow.add_annotation(x=i + 0.5, y=0, text="→", showarrow=False,
+                                font=dict(size=20, color="#94a3b8"))
+    flow.update_xaxes(visible=False, range=[-0.55, 3.55])
+    flow.update_yaxes(visible=False, range=[-0.55, 0.55])
+    flow.update_layout(height=170, margin=dict(l=6, r=6, t=6, b=6),
+                       paper_bgcolor="rgba(0,0,0,0)",
+                       plot_bgcolor="rgba(0,0,0,0)")
+    st.plotly_chart(flow, width="stretch")
     ch = st.columns(4)
-    for c_, (a, b, cc, target) in zip(ch, chain):
-        with c_, st.container(border=True):
-            st.markdown(f"**{a}**")
-            st.markdown(b)
-            st.markdown(f":blue[**{cc}**]")
-            st.button("→ 查看本层", key=f"go_{a}",
-                      use_container_width=True,
-                      on_click=lambda t=target: st.session_state.update(page=t))
+    for c_, (a, _q, _cc, target, _lname) in zip(ch, chain):
+        c_.button(f"→ {a}", key=f"go_{a}", use_container_width=True,
+                  on_click=lambda t=target: st.session_state.update(page=t))
 
     # 研究历程时间线: WP里程碑 + 两个bug事件
     wps = [("T0–T1.6", "数据底座<br>PIT门禁"), ("WP1", "面板组装<br>质量报告"),
@@ -215,7 +265,7 @@ if page == PAGES[0]:
     st.caption("防线速览：PIT单入口 · 嵌套筛选 · purge+embargo · "
                "次日开盘成交 · 固定权重记账 · 泄漏清单20条（详见「方法与防线」页）")
 
-    st.markdown("**重大bug：均已修复并有回归测试** —— 防线拦下过真错")
+    sec("重大bug：均已修复并有回归测试", "#dc2626")
     st.success("✅ **#19 复权因子重复cumprod** —— `backAdjustFactor`"
                "本身已是累计因子,再乘一次致远期收益爆炸(+2400万%)。\n\n"
                "**修复**: as-of取最近一次事件的累计因子,"
@@ -286,7 +336,7 @@ elif page == PAGES[1]:
     st.caption(f"执行: t收盘信号 → t+1开盘买 → t+1+h开盘卖 · "
                f"买5bp/卖15bp · 一字板跳过率 {r.skip_rate:.2%}")
 
-    st.markdown("**五分位分层累计收益** —— 组合级单调性(Q5=多头组)")
+    sec("五分位分层累计收益 · 组合级单调性(Q5=多头组)")
     lay = layers[(layers.protocol == proto) & (layers.horizon == h)]
     figl = go.Figure()
     colors = {1: C["lblue"], 2: "#a5b4fc", 3: C["gray"],
@@ -618,7 +668,7 @@ elif page == PAGES[6]:
     at = load("backtest_attribution")
     d6 = at[(at.protocol == proto) & (at.horizon == h)].sort_values("reb")
 
-    st.markdown("**归因占比速览** —— 组合收益是谁赚来的")
+    sec("归因占比速览 · 组合收益是谁赚来的", LAYER_C["组合层"])
     fin = d6.iloc[-1]
     tot = fin.cum_ret if fin.cum_ret != 0 else 1
     c1, c2, c3, c4 = st.columns(4)
@@ -633,7 +683,25 @@ elif page == PAGES[6]:
     st.caption("读法: 市场段是组合收益主体(常态), 残差段才是因子本身赚到的钱; "
                "size≈0 说明行业+市值中性化已传导到组合层——收益里没有大小盘风格水分。")
 
-    st.markdown("**alpha 是稳定赚的还是靠运气** —— 每期再平衡残差贡献")
+    sec("终值瀑布分解 · 四段贡献加总成组合收益", LAYER_C["组合层"])
+    wfv = [fin.cum_market * 100, fin.cum_industry * 100,
+           fin.cum_size * 100, fin.cum_residual * 100]
+    figw = go.Figure(go.Waterfall(
+        x=["市场β", "行业倾斜", "市值风格", "残差alpha", "组合收益"],
+        y=wfv + [fin.cum_ret * 100],
+        measure=["relative"] * 4 + ["total"],
+        text=[f"{v:+.1f}%" for v in wfv] + [f"{fin.cum_ret * 100:.1f}%"],
+        textposition="outside",
+        connector=dict(line=dict(color="#cbd5e1", width=1.5)),
+        increasing=dict(marker_color="#2e86de"),
+        decreasing=dict(marker_color="#dc2626"),
+        totals=dict(marker_color="#1f4e79")))
+    figw.update_yaxes(title="累计贡献 %")
+    st.plotly_chart(style(figw, 340, legend_y=-0.24), width="stretch")
+    st.caption("读法：前四段逐级加总=右端组合收益——市场β是主力，"
+               "行业小幅正负波动，市值≈0，残差alpha是因子真挣的钱。")
+
+    sec("alpha 是稳定赚的还是靠运气 · 每期残差贡献", LAYER_C["组合层"])
     pos = (d6.residual > 0).mean()
     figd = go.Figure(go.Bar(
         x=d6.reb, y=d6.residual * 100,
@@ -648,7 +716,7 @@ elif page == PAGES[6]:
     st.caption(f"正贡献期数占比 {pos:.0%}, 均值 {d6.residual.mean()*100:+.2f}%/期"
                f" —— 分散的小额正贡献比偶发大额更可信。")
 
-    st.markdown("**四段累计分解** —— 贡献随时间的构成")
+    sec("四段累计分解 · 贡献随时间的构成", LAYER_C["组合层"])
     figa = go.Figure()
     for col_, lab, colr in [("cum_market", "市场β", C["gray"]),
                             ("cum_industry", "行业倾斜", C["amber"]),
@@ -664,7 +732,7 @@ elif page == PAGES[6]:
                     width="stretch")
     st.caption("看蓝色残差段的斜率: 平稳上行=alpha持续产出; 走平期=信号在该行情失灵。")
 
-    st.markdown("**四臂终值分解对比** —— size≈0验证中性化传导到组合层")
+    sec("四臂终值分解对比 · size≈0验证中性化传导", LAYER_C["组合层"])
     last = (at.sort_values("reb").groupby(["protocol", "horizon"])
               [["cum_market", "cum_industry", "cum_size", "cum_residual"]]
               .last() * 100)
@@ -700,7 +768,7 @@ elif page == PAGES[7]:
     st.info("🛡️ **本页定位**：附录——数据规模、防泄漏防线全貌、方法说明与"
             "诚实记录。主论证链在前面各页。")
 
-    st.markdown("**数据规模与质量门禁** —— 一切结论建立在这些数字上")
+    sec("数据规模与质量门禁 · 一切结论建立在这些数字上")
     c0 = st.columns(6)
     for c_, (lab, val) in zip(c0, [
             ("面板行数", "241万"), ("覆盖股票", "1217只"),
@@ -718,7 +786,7 @@ elif page == PAGES[7]:
     st.plotly_chart(style(figt, 300, "可交易池规模(2017-2025, 451-500只/日)"),
                     width="stretch")
 
-    st.markdown("**防泄漏防线（泄漏清单20条）**")
+    sec("防泄漏防线（泄漏清单20条）")
     st.markdown("""
 - **PIT单入口**: 财务/股本可用性只在`pit.py`判断
 - **时间连接**: 一律`merge_asof(backward)`+断言兜底
