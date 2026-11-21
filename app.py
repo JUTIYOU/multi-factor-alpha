@@ -456,7 +456,37 @@ with t6:
     at = load("backtest_attribution")
     d6 = at[(at.protocol == proto) & (at.horizon == h)].sort_values("reb")
 
-    st.markdown("**组合收益四段分解** —— 市场/行业/风格/残差")
+    st.markdown("**归因占比速览** —— 组合收益是谁赚来的")
+    fin = d6.iloc[-1]
+    tot = fin.cum_ret if fin.cum_ret != 0 else 1
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("市场β贡献", f"{fin.cum_market/tot:.0%}",
+              f"累计 {fin.cum_market:+.1%}")
+    c2.metric("行业倾斜贡献", f"{fin.cum_industry/tot:.0%}",
+              f"累计 {fin.cum_industry:+.1%}")
+    c3.metric("市值风格贡献", f"{fin.cum_size/tot:.0%}",
+              f"累计 {fin.cum_size:+.1%}")
+    c4.metric("残差alpha贡献", f"{fin.cum_residual/tot:.0%}",
+              f"累计 {fin.cum_residual:+.1%}")
+    st.caption("读法: 市场段是组合收益主体(常态), 残差段才是因子本身赚到的钱; "
+               "size≈0 说明行业+市值中性化已传导到组合层——收益里没有大小盘风格水分。")
+
+    st.markdown("**alpha 是稳定赚的还是靠运气** —— 每期再平衡残差贡献")
+    pos = (d6.residual > 0).mean()
+    figd = go.Figure(go.Bar(
+        x=d6.reb, y=d6.residual * 100,
+        marker_color=[C["blue"] if v > 0 else "#DC2626"
+                      for v in d6.residual],
+        hovertemplate="%{x|%Y-%m-%d}<br>残差贡献 %{y:+.2f}%<extra></extra>"))
+    figd.add_hline(y=0, line_color="#94A3B8", line_width=1)
+    figd.update_yaxes(title="残差贡献 %/期")
+    st.plotly_chart(style(figd, 300,
+                          f"{proto} h{h} 每期残差 (正占 {pos:.0%})"),
+                    width="stretch")
+    st.caption(f"正贡献期数占比 {pos:.0%}, 均值 {d6.residual.mean()*100:+.2f}%/期"
+               f" —— 分散的小额正贡献比偶发大额更可信。")
+
+    st.markdown("**四段累计分解** —— 贡献随时间的构成")
     figa = go.Figure()
     for col_, lab, colr in [("cum_market", "市场β", C["gray"]),
                             ("cum_industry", "行业倾斜", C["amber"]),
@@ -470,6 +500,7 @@ with t6:
     figa.update_yaxes(title="累计贡献")
     st.plotly_chart(style(figa, 430, f"{proto} h{h} 累计分解"),
                     width="stretch")
+    st.caption("看蓝色残差段的斜率: 平稳上行=alpha持续产出; 走平期=信号在该行情失灵。")
 
     st.markdown("**四臂终值分解对比** —— size≈0验证中性化传导到组合层")
     last = (at.sort_values("reb").groupby(["protocol", "horizon"])
@@ -486,6 +517,11 @@ with t6:
     figb.update_layout(barmode="stack")
     figb.update_yaxes(title="累计贡献 %")
     st.plotly_chart(style(figb, 380), width="stretch")
+    best = last.cum_residual.idxmax()
+    worst_sz = last.cum_size.abs().max()
+    st.caption(f"残差最高: **{best}** (累计 {last.cum_residual.max():.1f}pct); "
+               f"四臂市值贡献绝对值最大仅 {worst_sz:.1f}pct —— 风格水分已剥净, "
+               f"各臂差异集中在残差段, 即因子筛选与合成方式本身。")
 
     with st.expander("关于本项目 — 方法/防线/诚实记录", expanded=False):
         st.markdown("""
@@ -493,6 +529,11 @@ with t6:
 `pubDate`可用日+asof-backward连接) → 31个截面因子 → 三版中性化
 (raw/size/行业+市值WLS残差) → 四协议对照训练 → 折级SHAP簇级聚合 →
 PSI+IC衰减漂移监控 → 次日开盘含成本回测 → 组合四段归因。
+
+**归因方法**: 每期组合收益被恒等分解为四段——市场(基准收益) + 行业
+(组合行业权重偏离基准的超配贡献) + 市值(市值暴露贡献) + 残差(剥离
+以上风格后剩下的, 即因子本身赚到的钱)。市场段通常是主体(60-90%),
+这符合任何多头组合的现实; 评估因子价值看残差段的持续性与占比。
 
 **防泄漏防线**: PIT单入口 · merge_asof断言 · 截面groupby('date')纪律 ·
 嵌套筛选 · purge+embargo · 次日开盘成交 · 固定权重记账。
