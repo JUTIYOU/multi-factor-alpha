@@ -70,6 +70,15 @@ def style(fig: go.Figure, height: int = 420, title: str = "",
     return fig
 
 
+def concl(text: str) -> None:
+    """统一结论徽章——左侧色条卡片, 区别于 st.info 问题框."""
+    st.markdown(
+        f"<div style='border-left:4px solid {C['green']};background:#f0fdf4;"
+        f"padding:10px 14px;border-radius:6px;font-size:14px;color:#14532d;"
+        f"margin:8px 0'><b>结论</b> · {text}</div>",
+        unsafe_allow_html=True)
+
+
 @st.cache_data
 def load(name: str) -> pd.DataFrame:
     df = pd.read_csv(REP / f"{name}.csv")
@@ -142,28 +151,67 @@ with st.sidebar:
                "数据源: BaoStock日频 · 中证500历史成分\n"
                "所有结果均为样本外/含成本口径")
 
-t0, t1, t2, t3, t4, t5, t6, t7 = st.tabs(
-    ["归因全景", "回测可信度", "因子层·IC真伪", "合成·不浪费α",
-     "信号层·力量来源", "时间层·失效诊断", "组合层·谁赚的钱", "方法与防线"])
+PAGES = ["归因全景", "回测可信度", "因子层·IC真伪", "合成·不浪费α",
+         "信号层·力量来源", "时间层·失效诊断", "组合层·谁赚的钱", "方法与防线"]
+st.session_state.setdefault("page", PAGES[0])
+page = st.segmented_control("导航", PAGES, key="page",
+                            label_visibility="collapsed")
 
-# ================= Tab0 归因全景 =================
-with t0:
+# ================= 归因全景 =================
+if page == PAGES[0]:
     st.info("**本项目的核心方法：把归因思维贯穿整条研究链** —— 每一层都在问"
-            "「结果里多少是真的、多少是借来的」。按 Tab 顺序读 = 完整归因链。")
-    st.markdown("**归因链 · 四层分解**")
+            "「结果里多少是真的、多少是借来的」。点击下方卡片直达对应层。")
+    st.markdown("**归因链 · 四层分解（卡片可点击）**")
     chain = [
-        ("① 因子层", "IC里有几成真？", "19–26%是风格伪装", "见「因子层」页"),
-        ("② 信号层", "预测力来自哪簇？", "流动性簇垄断", "见「信号层」页"),
-        ("③ 时间层", "失效的是什么？", "lev 真衰减 −0.52", "见「时间层」页"),
-        ("④ 组合层", "钱是谁赚的？", "残差alpha仅 4–16%", "见「组合层」页"),
+        ("🔬 因子层", "IC里有几成真？", "19–26%是风格伪装", PAGES[2]),
+        ("📡 信号层", "预测力来自哪簇？", "流动性簇垄断", PAGES[4]),
+        ("⏱️ 时间层", "失效的是什么？", "lev 真衰减 −0.52", PAGES[5]),
+        ("💰 组合层", "钱是谁赚的？", "残差alpha仅 4–16%", PAGES[6]),
     ]
     ch = st.columns(4)
-    for c_, (a, b, cc, d) in zip(ch, chain):
+    for c_, (a, b, cc, target) in zip(ch, chain):
         with c_, st.container(border=True):
             st.markdown(f"**{a}**")
             st.markdown(b)
             st.markdown(f":blue[**{cc}**]")
-            st.caption(d)
+            st.button("→ 查看本层", key=f"go_{a}",
+                      use_container_width=True,
+                      on_click=lambda t=target: st.session_state.update(page=t))
+
+    # 研究历程时间线: WP里程碑 + 两个bug事件
+    wps = [("T0–T1.6", "数据底座<br>PIT门禁"), ("WP1", "面板组装<br>质量报告"),
+           ("WP2", "31因子<br>三版中性化"), ("WP3", "四协议建模<br>嵌套筛选"),
+           ("WP4", "SHAP+漂移<br>审计"), ("WP5", "含成本回测<br>四段归因"),
+           ("WP6", "报告+仪表盘<br>开源上线")]
+    bugs = [(1.5, "#19", "复权因子重复cumprod<br>+2400万%→已修"),
+            (5.5, "#20", "在场腿均值记账<br>+157%→已修")]
+    figtl = go.Figure()
+    figtl.add_scatter(x=list(range(len(wps))), y=[1] * len(wps),
+                      mode="lines", line=dict(color="#cbd5e1", width=2),
+                      showlegend=False, hoverinfo="skip")
+    for i, (name, det) in enumerate(wps):
+        figtl.add_scatter(
+            x=[i], y=[1], mode="markers+text",
+            marker=dict(size=15, color=C["blue"]),
+            text=f"<b>{name}</b><br>{det}", textposition="top center",
+            showlegend=False, hoverinfo="skip")
+    for bx, bname, bdet in bugs:
+        figtl.add_scatter(x=[bx, bx], y=[0.32, 0.9], mode="lines",
+                          line=dict(color=C["red"], dash="dot"),
+                          showlegend=False, hoverinfo="skip")
+        figtl.add_scatter(x=[bx], y=[0.28], mode="markers+text",
+                          marker=dict(size=13, color=C["red"],
+                                      symbol="diamond"),
+                          text=f"<b>{bname}</b><br>{bdet}",
+                          textposition="bottom center",
+                          showlegend=False, hoverinfo="skip")
+    figtl.update_xaxes(visible=False)
+    figtl.update_yaxes(visible=False, range=[-0.1, 1.55])
+    figtl.update_layout(margin=dict(l=10, r=10, t=40, b=10))
+    st.plotly_chart(style(figtl, 210,
+                          "研究历程 —— WP里程碑与两次bug修复（红钻）"),
+                    width="stretch")
+
     st.caption("防线速览：PIT单入口 · 嵌套筛选 · purge+embargo · "
                "次日开盘成交 · 固定权重记账 · 泄漏清单20条（详见「方法与防线」页）")
 
@@ -185,8 +233,8 @@ with t0:
                "测试17/17通过。")
 
 # ================= Tab1 回测可信度 =================
-with t1:
-    st.info("**本页问题**：净年化≈13%可信吗——先审执行口径，再看数字大小。")
+elif page == PAGES[1]:
+    st.info("📈 **本页问题**：净年化≈13%可信吗——先审执行口径，再看数字大小。")
     arm_chip()
     nav = load("backtest_nav")
     layers = load("backtest_layers")
@@ -248,9 +296,9 @@ with t1:
                          line=dict(color=colors[g],
                                    width=1.8 if g == 5 else 1.0))
     st.plotly_chart(style(figl, 380), width="stretch")
-    st.success("**结论**：净超额≈4.5%/年是在含成本、PIT干净口径下得到的——"
-               "数字的意义来自口径约束而非数值大小；毛-净差即每年真实成本代价，"
-               "五分位单调性说明信号在组合层面确实分层。")
+    concl("净超额≈4.5%/年是在含成本、PIT干净口径下得到的——"
+          "数字的意义来自口径约束而非数值大小；毛-净差即每年真实成本代价，"
+          "五分位单调性说明信号在组合层面确实分层。")
     with st.expander("本层深入分析"):
         st.markdown(f"""
 - **毛-净差值**：毛年化 {r.gross_ann:.1%} vs 净年化 {r.ann_ret:.1%}
@@ -266,8 +314,8 @@ with t1:
 """)
 
 # ================= Tab2 因子层·IC真伪 =================
-with t2:
-    st.info("**本页问题**：26个过初筛因子的IC，多少是真alpha、"
+elif page == PAGES[2]:
+    st.info("🔬 **本页问题**：26个过初筛因子的IC，多少是真alpha、"
             "多少是行业/市值风格借来的？")
     arm_chip(" · 初筛/单调性固定h5·indsize")
     ic = load("ic_halflife")
@@ -318,9 +366,9 @@ with t2:
                 text=n5[metric].round(4), textposition="auto"))
             st.plotly_chart(style(figb, 210, f"{f1} {ttl}"),
                             width="stretch")
-    st.success("**归因结论**：流动性簇 19–26% 的IC是风格贡献——"
-               "每4元IC约1元借自行业/市值；反转类剥掉风格后IC反而+13–20%"
-               "（风格一直在掩蔽真信号）。→ 主线采用 indsize")
+    concl("流动性簇 19–26% 的IC是风格贡献——每4元IC约1元借自行业/市值；"
+          "反转类剥掉风格后IC反而+13–20%（风格一直在掩蔽真信号）。"
+          "→ 主线采用 indsize")
     st.caption("方法注：中性化=逐日截面WLS回归取残差（ln市值+行业哑变量"
                "连续暴露连续剥），比「分十组去组均值」利用信息更充分。")
 
@@ -345,8 +393,8 @@ with t2:
 """)
 
 # ================= Tab3 合成·不浪费alpha =================
-with t3:
-    st.info("**本页问题**：四种合成协议，谁在浪费信号里的alpha？")
+elif page == PAGES[3]:
+    st.info("⚖️ **本页问题**：四种合成协议，谁在浪费信号里的alpha？")
     arm_chip()
     pc = load("model_protocol_comparison")
     comp = load("composite_drift")
@@ -394,11 +442,12 @@ with t3:
                 style(figp, 320, f"{VAR_LAB[variant]} h{h} — {ttl}"),
                 width="stretch")
     st.caption("P1 训一次·P2 走样重训·P3 +purge/embargo·P4 等权合成 —— "
-               "P1→P2=重训收益(+20%IC), P2→P3=切边水分(≈0), P3→P4=非线性增量(≈0或负)")
-    st.success("**归因结论**：等权≥LGBM（IC≈.059 vs .055）——因子经嵌套"
-               "筛选正交化后，非线性模型没有增量信息可挖、只增加不稳定。"
-               "这个「负结果」恰恰证明因子层工作已提取绝大部分可预测性"
-               " → 主线P4等权。")
+               "P1→P2=重训收益(+20%IC), P2→P3=切边水分(≈0), P3→P4=非线性增量(≈0或负)。"
+               "P1/P2为消融对照臂（故意削弱以隔离效应），"
+               "不进入组合层回测，故侧栏只提供P3/P4切换。")
+    concl("等权≥LGBM（IC≈.059 vs .055）——因子经嵌套筛选正交化后，"
+          "非线性模型没有增量信息可挖、只增加不稳定。"
+          "这个「负结果」恰恰证明因子层工作已提取绝大部分可预测性 → 主线P4等权。")
 
     c3a, c3b = st.columns([1, 1])
     with c3a:
@@ -453,8 +502,8 @@ with t3:
 """)
 
 # ================= Tab4 信号层·力量来源 =================
-with t4:
-    st.info("**本页问题**：合成信号的预测力，到底来自哪几个因子簇？")
+elif page == PAGES[4]:
+    st.info("📡 **本页问题**：合成信号的预测力，到底来自哪几个因子簇？")
     arm_chip()
     shp = load("shap_importance")
     s4 = shp[shp.horizon == h]
@@ -482,8 +531,8 @@ with t4:
     st.plotly_chart(style(figf2, 460, legend_y=-0.28), width="stretch")
     st.caption("折间重要性排名相关 0.77–0.83 —— 重要性结构跨时间稳定;"
                "高贡献因子为独立alpha而非风格代理。")
-    st.success("**归因结论**：流动性簇份额第一且折间稳定——组合本质是"
-               "流动性溢价收割器，这也解释了它在2024微盘崩盘期的回撤来源。")
+    concl("流动性簇份额第一且折间稳定——组合本质是流动性溢价收割器，"
+          "这也解释了它在2024微盘崩盘期的回撤来源。")
     with st.expander("本层深入分析"):
         st.markdown("""
 - **|ρ|>0.7 阈值怎么定的**：共线聚类的相关阈值，高于它的因子被认定
@@ -504,8 +553,8 @@ with t4:
         st.dataframe(memb, hide_index=True, width="stretch")
 
 # ================= Tab5 时间层·失效诊断 =================
-with t5:
-    st.info("**本页问题**：信号失效时，是世界变了（分布漂移）还是"
+elif page == PAGES[5]:
+    st.info("⏱️ **本页问题**：信号失效时，是世界变了（分布漂移）还是"
             "alpha死了（IC衰减）？——两种失效要两种对策。")
     arm_chip()
     dr = load("factor_drift")
@@ -534,10 +583,9 @@ with t5:
     st.plotly_chart(style(figd, 470, legend_y=-0.28), width="stretch")
     st.caption("右下象限(高PSI+低衰减比)=真alpha衰减, 如lev(0.42/-0.52类); "
                "高PSI但IC完好=分布漂移非失效, 如ivol。")
-    st.success("**归因结论**：lev/roe/npm 落右下象限=真衰减"
-               "（衰减比 −0.52/0.42/0.26）→ 对策：定期重训+降权；"
-               "波动类分布漂移但 IC 反增——拥挤度变化≠alpha消失。"
-               "先分清失效类型，才谈得上应对。")
+    concl("lev/roe/npm 落右下象限=真衰减（衰减比 −0.52/0.42/0.26）"
+          "→ 对策：定期重训+降权；波动类分布漂移但 IC 反增——"
+          "拥挤度变化≠alpha消失。先分清失效类型，才谈得上应对。")
 
     st.markdown("**报警因子清单** —— 按报警季数与衰减比排序")
     alarm_tbl = (dr[dr.alarm_q > 0]
@@ -564,8 +612,8 @@ with t5:
 """)
 
 # ================= Tab6 组合层·谁赚的钱 =================
-with t6:
-    st.info("**本页问题**：组合赚的钱，多少是市场白送的、多少是因子挣的？")
+elif page == PAGES[6]:
+    st.info("💰 **本页问题**：组合赚的钱，多少是市场白送的、多少是因子挣的？")
     arm_chip()
     at = load("backtest_attribution")
     d6 = at[(at.protocol == proto) & (at.horizon == h)].sort_values("reb")
@@ -648,8 +696,8 @@ with t6:
 """)
 
 # ================= Tab7 方法与防线(附录) =================
-with t7:
-    st.info("**本页定位**：附录——数据规模、防泄漏防线全貌、方法说明与"
+elif page == PAGES[7]:
+    st.info("🛡️ **本页定位**：附录——数据规模、防泄漏防线全貌、方法说明与"
             "诚实记录。主论证链在前面各页。")
 
     st.markdown("**数据规模与质量门禁** —— 一切结论建立在这些数字上")
