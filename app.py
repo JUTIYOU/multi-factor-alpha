@@ -100,36 +100,45 @@ m[5].metric("残差alpha占比", "4–16%")
 st.divider()
 
 # ================= 侧栏 =================
-PROTO_LAB = {"P4": "P4 · 等权合成(主线)", "P3": "P3 · LightGBM合成"}
+PROTO_LAB = {"P4": "P4 · 26因子等权(主线)", "P3": "P3 · LightGBM合成"}
 VAR_LAB = {"indsize": "行业+市值中性化", "size": "仅市值中性化",
            "raw": "原始(未中性化)"}
 
+
+def arm_chip(extra: str = "") -> None:
+    """每页顶部的当前口径提示——评委不用回头看侧栏."""
+    tag = "等权" if proto == "P4" else "LGBM模型"
+    st.caption(f"当前口径：{proto}（{tag}）· h{h}{extra}")
+
+
 with st.sidebar:
-    st.markdown("### 分析口径")
+    st.markdown("### 分析口径（全局）")
     proto = st.radio("信号协议", ["P4", "P3"],
                      format_func=lambda p: PROTO_LAB[p])
+    st.caption("P3 让 LightGBM 模型学因子权重（非线性）；"
+               "P4 直接 26 因子等权——两者结果几乎相同，"
+               "说明因子本身已提尽可预测性（本项目核心发现）")
     h = st.radio("持有周期", [10, 5], horizontal=True,
-                 format_func=lambda x: f"{x} 个交易日",
-                 help="信号持有h日后调仓; h10换手更低成本更少")
-    variant = st.radio("特征版本", ["indsize", "size", "raw"],
-                       format_func=lambda v: VAR_LAB[v],
-                       help="影响[协议与合成]页; 因子解剖页本身就在对比三版本")
-    st.markdown("### 显示选项")
-    show_gross = st.checkbox("对比毛净值(不含成本)", value=True)
-    show_bench = st.checkbox("对比中证500", value=True)
-    with st.expander("名词解释"):
+                 format_func=lambda x: f"{x} 个交易日")
+    st.caption("10日=主线（换手低、成本省）；"
+               "5日=信号衰减更快、换手更高")
+    with st.expander("名词解释（大白话）"):
         st.markdown("""
-- **P1** 一次性训练永不重训 · **P2** 走样季重训 ·
-  **P3** P2+purge/embargo防泄漏(模型主线) · **P4** 等权合成(信号主线)
-- **raw** 因子原值 · **size** 剥市值 · **indsize** 剥行业+市值
-- **IC** 因子排名与未来收益排名的日度相关 · **ICIR** IC均值/IC波动
-- **PSI** 分布漂移度(>0.25报警) · **IC衰减比** 后期IC/前期IC(<1=衰减)
-- **残差alpha** 组合收益中市场/行业/市值解释不了的部分
-- **归因链** 因子层(IC真伪)→信号层(力量来源)→时间层(失效诊断)
+- **P1** 模型训一次永不再训（会老化） · **P2** 定期重训 ·
+  **P3** P2+删掉边界重叠样本防泄漏 · **P4** 不用模型，26因子等权
+- **raw / size / indsize**：因子三版本——没剥风格 / 只剥市值 /
+  剥掉行业+市值（最干净）
+- **IC**：因子预测和实际收益的一致度，越高越好 ·
+  **ICIR**：IC的稳定性（越高越可靠）
+- **PSI**：因子分布变了多少（>0.25报警） ·
+  **IC衰减比**：后期预测力/前期预测力（<1=在变弱）
+- **残差alpha**：去掉市场/行业/市值后，组合收益里"因子真挣的钱"
+- **归因链**：因子层(IC真假)→信号层(力量来源)→时间层(失效诊断)
   →组合层(谁赚的钱)
 """)
     st.divider()
-    st.caption("按Tab顺序读=完整归因链\n\n"
+    st.caption("阅读路径：「归因全景」是总纲，其后每页拆解归因链的一层，"
+               "「方法与防线」为附录。\n\n"
                "数据源: BaoStock日频 · 中证500历史成分\n"
                "所有结果均为样本外/含成本口径")
 
@@ -178,6 +187,7 @@ with t0:
 # ================= Tab1 回测可信度 =================
 with t1:
     st.info("**本页问题**：净年化≈13%可信吗——先审执行口径，再看数字大小。")
+    arm_chip()
     nav = load("backtest_nav")
     layers = load("backtest_layers")
     bench = pd.read_csv(REP / "demo" / "index_nav.csv",
@@ -205,6 +215,9 @@ with t1:
         c_.metric(lab, val)
 
     dd = d.nav_net / d.nav_net.cummax() - 1
+    tc1, tc2 = st.columns(2)
+    show_gross = tc1.checkbox("叠加毛净值（不含成本）", value=True)
+    show_bench = tc2.checkbox("叠加中证500基准", value=True)
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
                         row_heights=[0.72, 0.28], vertical_spacing=0.04)
     fig.add_scatter(x=d.date, y=d.nav_net, name="净净值(含成本)",
@@ -238,11 +251,25 @@ with t1:
     st.success("**结论**：净超额≈4.5%/年是在含成本、PIT干净口径下得到的——"
                "数字的意义来自口径约束而非数值大小；毛-净差即每年真实成本代价，"
                "五分位单调性说明信号在组合层面确实分层。")
+    with st.expander("本层深入分析"):
+        st.markdown(f"""
+- **毛-净差值**：毛年化 {r.gross_ann:.1%} vs 净年化 {r.ann_ret:.1%}
+  的差 = 每年真实交易成本（{r.cost_drag_ann:.1%}）。
+  评估任何策略先问"含成本了吗"——很多策略死在这一项。
+- **一字板跳过率 {r.skip_rate:.2%}**：买不进/卖不出的日子如实跳过，
+  而非按"假设能成交"记账——回测注水的高发区。
+- **分层中部非单调**：Q2–Q4 顺序不完全单调（已披露）——
+  中部区分度弱是真实信号的常态，Q1 与 Q5 张开才是关键证据。
+- **h5 vs h10 的权衡**：5日信号衰减快、换手和成本更高；
+  10日衰减慢且省成本——主线选 h10 是"信号衰减 × 成本"的权衡结果，
+  不是唯一正确解。
+""")
 
 # ================= Tab2 因子层·IC真伪 =================
 with t2:
     st.info("**本页问题**：26个过初筛因子的IC，多少是真alpha、"
             "多少是行业/市值风格借来的？")
+    arm_chip(" · 初筛/单调性固定h5·indsize")
     ic = load("ic_halflife")
     neu = load("factor_neutralization")
     scr = load("factor_screening")
@@ -265,8 +292,8 @@ with t2:
     c2a, c2b = st.columns([1, 1])
     with c2a:
         st.markdown("**单调性审计** —— top15/26, "
-                    "十分位收益与因子排名的Spearman")
-        s5 = (scr[(scr.horizon == h) & scr.selected]
+                    "十分位收益与因子排名的Spearman（固定h5·indsize口径）")
+        s5 = (scr[(scr.horizon == 5) & scr.selected]
               .assign(absrho=lambda x: x.mono_rho.abs())
               .sort_values("absrho", ascending=False).head(15)
               .sort_values("mono_rho"))
@@ -297,18 +324,38 @@ with t2:
     st.caption("方法注：中性化=逐日截面WLS回归取残差（ln市值+行业哑变量"
                "连续暴露连续剥），比「分十组去组均值」利用信息更充分。")
 
-    with st.expander("初筛全表 (26/31入选)"):
-        show = scr[scr.horizon == h].drop(
+    st.caption("口径说明：初筛与单调性固定在 **h5·indsize** 评估一次，"
+               "不随分析口径切换——筛选边界不随观察窗漂移，"
+               "这是防「按窗挑口径」过拟合的设计。")
+    with st.expander("初筛全表 (26/31入选， h5·indsize口径)"):
+        show = scr[scr.horizon == 5].drop(
             columns=["variant", "horizon"], errors="ignore")
         st.dataframe(show.sort_values("icir", ascending=False),
                      hide_index=True, width="stretch")
+    with st.expander("本层深入分析"):
+        st.markdown("""
+- **19–26% 的计算口径**：`(raw|IC| − indsize|IC|) / raw|IC|`，
+  对流动性簇逐因子计算取范围——即「风格伪装率」。
+- **反转类「负衰减」**：剥掉行业+市值后 IC 反而 +13–20%——
+  风格一直在压低反转信号，剥离风格=去噪而不是损失。
+- **为什么选 indsize 而非 size**：size 版 IC 普遍落在两端之间，
+  行业倾斜没剥净时 ICIR 更不稳——消融对比只需两个端点。
+- **局限**：中性化是线性 WLS 残差，剥不掉非线性风格暴露
+  （如市值²效应）——这是已披露并接受残余风险的地方。
+""")
 
 # ================= Tab3 合成·不浪费alpha =================
 with t3:
     st.info("**本页问题**：四种合成协议，谁在浪费信号里的alpha？")
+    arm_chip()
     pc = load("model_protocol_comparison")
     comp = load("composite_drift")
     sel = load("fold_selection")
+
+    variant = st.radio("特征版本（只影响本页）", ["indsize", "size", "raw"],
+                       format_func=lambda v: VAR_LAB[v], horizontal=True)
+    st.caption("三版递进剥风格：raw没剥 → size剥市值 → indsize剥行业+市值，"
+               "看IC还剩多少——这是因子层归因在协议层面的复核")
 
     st.markdown("**四协议对照** —— 同一测试区间, 差值干净归因 "
                 f"(当前: {VAR_LAB[variant]})")
@@ -393,10 +440,22 @@ with t3:
         cc[2].metric("负IC日占比", f"{comp_h.neg_days_pct:.0%}")
         st.caption("2024微盘崩盘期滚动IC曾触底≈0/-0.05(图中可见凹陷), "
                    "随后恢复——信号短期失效但结构未破。")
+    with st.expander("本层深入分析"):
+        st.markdown("""
+- **差值归因**：P1→P2 = 重训收益（+20%IC，模型会老化必须重训）；
+  P2→P3 ≈ 0（本场景切边泄漏本来就小，防线是保险不是增益）；
+  P3→P4 ≈ 0或负（正交化后非线性没有增量信息）。
+- **等权赢为什么是好结果**：26个经筛选+中性化的因子已把截面
+  可预测性提尽——模型复杂度用在"已没信息"的地方只会引入方差。
+- **入选频次读法**：满折入选的因子=信号骨干（如 turn_mean/ivol），
+  只入选几折的=边缘贡献，被嵌套筛选自然淘汰——这正是
+  "每折只用训练窗选因子"防线想要的效果。
+""")
 
 # ================= Tab4 信号层·力量来源 =================
 with t4:
     st.info("**本页问题**：合成信号的预测力，到底来自哪几个因子簇？")
+    arm_chip()
     shp = load("shap_importance")
     s4 = shp[shp.horizon == h]
     st.markdown("**簇级份额** —— 先按|ρ|>0.7聚类再聚合, 防相关因子信用稀释")
@@ -425,6 +484,18 @@ with t4:
                "高贡献因子为独立alpha而非风格代理。")
     st.success("**归因结论**：流动性簇份额第一且折间稳定——组合本质是"
                "流动性溢价收割器，这也解释了它在2024微盘崩盘期的回撤来源。")
+    with st.expander("本层深入分析"):
+        st.markdown("""
+- **|ρ|>0.7 阈值怎么定的**：共线聚类的相关阈值，高于它的因子被认定
+  "在说同一件事"——阈值会改变簇的粒度，但核心结论（流动性簇第一）
+  对折间稳健（排名相关 0.77–0.83）。
+- **簇级 vs 单因子**：单因子SHAP会把同一簇的信用分摊到成员身上，
+  看起来"谁都不太重要"；簇级聚合后才暴露流动性簇的垄断地位——
+  这是方法选择改变结论的典型例子。
+- **风险含义**：预测力集中在流动性簇 = 组合本质是流动性溢价
+  收割器——它既是收益来源也是拥挤风险来源，
+  这直接连到「时间层」的失效诊断。
+""")
 
     with st.expander("相关簇成员名单(|ρ|>0.7聚类, 簇内选代表)"):
         memb = (s4.groupby("cluster")["factor"]
@@ -436,6 +507,7 @@ with t4:
 with t5:
     st.info("**本页问题**：信号失效时，是世界变了（分布漂移）还是"
             "alpha死了（IC衰减）？——两种失效要两种对策。")
+    arm_chip()
     dr = load("factor_drift")
     thr = st.slider("PSI报警阈值", 0.1, 1.0, 0.25, 0.05)
     st.markdown("**漂移 vs 衰减** —— 两个独立的失效维度")
@@ -479,10 +551,22 @@ with t5:
                      "persist_mean": "暴露持续性"})
                  .round(3))
     st.dataframe(alarm_tbl, hide_index=True, width="stretch")
+    with st.expander("本层深入分析"):
+        st.markdown("""
+- **lev 衰减比 −0.52 怎么读**：后期IC不足前期一半——杠杆类因子的
+  预测力在衰减，不是分布变了，是alpha在消失。
+- **为什么必须双轴**：只看PSI会把"分布变了但IC完好"的因子误杀
+  （如波动类，拥挤度变了alpha还在）；只看衰减会漏掉分布剧变的
+  预警信号。两轴交叉才分得清"世界变了"和"alpha死了"。
+- **对应动作**：真衰减（右下象限）→ 定期重训+降权；
+  分布漂移（左上）→ 监控拥挤度、不动信号——
+  这就是漂移监控存在的意义：区分失效类型才谈得上应对。
+""")
 
 # ================= Tab6 组合层·谁赚的钱 =================
 with t6:
     st.info("**本页问题**：组合赚的钱，多少是市场白送的、多少是因子挣的？")
+    arm_chip()
     at = load("backtest_attribution")
     d6 = at[(at.protocol == proto) & (at.horizon == h)].sort_values("reb")
 
@@ -552,6 +636,16 @@ with t6:
     st.caption(f"残差最高: **{best}** (累计 {last.cum_residual.max():.1f}pct); "
                f"四臂市值贡献绝对值最大仅 {worst_sz:.1f}pct —— 风格水分已剥净, "
                f"各臂差异集中在残差段, 即因子筛选与合成方式本身。")
+    with st.expander("本层深入分析"):
+        st.markdown("""
+- **分解口径**：市场=基准同期收益；行业=组合行业权重相对基准的
+  超配贡献；市值=市值暴露贡献；残差=以上都解释不了后剩下的部分。
+- **size≈0 的含义**：组合层市值贡献≈0，证明因子层做的中性化
+  传导到了组合层——收益里没有大小盘风格的水分。
+- **alpha 4–16% 为什么是区间**：不同臂（P3/P4）和周期（h5/h10）
+  残差占比不同——区间宽度本身就是"合成方式与持有期影响
+  alpha兑现效率"的证据，而非估计误差。
+""")
 
 # ================= Tab7 方法与防线(附录) =================
 with t7:
